@@ -11,8 +11,8 @@ let under = /https:\/\/example\.net\/videos\//
 // the main object that keeps the video in memory and replies to request listening to fetch
 let downloaded = {}
 
-// this is the buffer size, it continuesly downloads 3mb chunks of the video. Till the end
-let lenght = 3000000
+// this is the buffer size, it continuously downloads 3mb chunks of the video. Till the end of it.
+let length = 3000000
 
 // to tell the tab how much of the video we downloaded
 let Client
@@ -27,7 +27,7 @@ self.addEventListener('fetch', async function (event) {
 			let buff = downloaded[url].buffer.slice(range)
 			// send small slices and not the whole video!
 			// else the sandbox will run out of memory
-			let fuff = buff.slice(0, lenght)
+			let fuff = buff.slice(0, length)
 			console.log('replying', fuff)
 			resolve(
 				new Response(fuff, {
@@ -49,7 +49,7 @@ self.addEventListener('fetch', async function (event) {
 	if (extensions.test(url) && under.test(url)) {
 		if (!downloaded[url]) {
 			console.log('url is', url)
-			console.log('lenght is', lenght)
+			console.log('length is', length)
 
 			// delete old videos and to cancel buffering of current video if any
 			downloaded = {}
@@ -99,13 +99,13 @@ self.addEventListener('fetch', async function (event) {
 })
 
 function download(url, event) {
-	// if the buffer was canceled return!
+	// if the buffer was cancelled return
 	if (!downloaded[url]) {
 		return
 	}
 
 	let start = downloaded[url].range
-	let end = downloaded[url].range + lenght - 1
+	let end = downloaded[url].range + length - 1
 
 	// do not overflow the range
 	if (downloaded[url].size > 0 && end > downloaded[url].size) {
@@ -122,33 +122,33 @@ function download(url, event) {
 		},
 	})
 		.then(response => {
-			// if the buffer was canceled return!
+			// if the buffer was cancelled return
 
 			if (!downloaded[url]) {
 				return
 			}
-			console.log('lenght is', +response.headers.get('Content-Length'))
+			console.log('length is', +response.headers.get('Content-Length'))
 			console.log('size is', +response.headers.get('Content-Range').split('/')[1])
 			console.log('downlaoded is', downloaded[url].buffer.byteLength)
 			downloaded[url].size = +response.headers.get('Content-Range').split('/')[1]
 
 			// are we done?
-			if (+response.headers.get('Content-Length') < lenght) {
+			if (+response.headers.get('Content-Length') < length) {
 				downloaded[url].done = true
 			}
 			return response.arrayBuffer()
 		})
 		.then(buffer => {
-			// if the buffer was canceled return!
+			// if the buffer was cancelled return
 			if (!downloaded[url]) {
 				return
 			}
 
 			// save the data
 			downloaded[url].buffer = concatBuffers(downloaded[url].buffer, buffer)
-			downloaded[url].range += lenght
+			downloaded[url].range += length
 
-			// update the browser buffered ammount
+			// update the browser buffered amount
 			if (Client) {
 				let one = downloaded[url].size / 100
 				try {
@@ -166,11 +166,11 @@ function download(url, event) {
 			}
 		})
 		.catch(function () {
-			// if the buffer was canceled return!
+			// if the buffer was cancelled return
 			if (!downloaded[url]) {
 				return
 			}
-			// on error keep trying!
+			// on error keep trying
 			download(url, event)
 		})
 }

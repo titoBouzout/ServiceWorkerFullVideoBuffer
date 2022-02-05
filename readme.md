@@ -21,7 +21,7 @@ In your website, do something like the following to include the service worker
 	if ('serviceWorker' in navigator) {
 		window.addEventListener('load', () => {
 			navigator.serviceWorker
-				.register('/service-worker.js')
+				.register('/full-video-buffer-service-worker.js')
 				.then(function (registration) {
 					registration.update()
 				})
