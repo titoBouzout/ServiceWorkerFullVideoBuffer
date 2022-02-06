@@ -14,7 +14,7 @@ So you can do the old-school pause a video to make it buffer for some minutes, a
 
 ## How to use it?
 
-In your website, instance the service worker and include the client code which will keep the video in memory to give the ranges to the service worker when a video needs data. The video is not kept in memory on the service worker, because they are restarted or terminated whenever the browser feels like.
+In your website, instance the service worker and include the client code which will keep the video in memory to give the ranges to the service worker when a video needs data. The video is not kept in memory on the service worker, because they are restarted or terminated whenever the browser feels like. You just add a video tag with the same URL that you choose to buffer and the service worker will do the work.
 
 ```html
 <script type="text/javascript" src="/full-video-buffer-client.js"></script>
@@ -24,8 +24,9 @@ In your website, instance the service worker and include the client code which w
 		.then(registration => registration.update())
 		.catch(console.log)
 
-	// start buffering a video
+	// instance the client
 	let bufferVideo = new BufferVideo()
+	// start buffering a video
 	// optionally you can use a callback to display info
 	bufferVideo('http://example.net/video.mp4', function (buffer) {
 		console.log('The video url is ' + buffer.url)
@@ -49,18 +50,10 @@ let extensions = /\.mp4$/
 let under = /\/video\//
 ```
 
-On your site you can guess when you can start watching with the following formula:
+You can guess when you can start watching without having any spinning wheel with the following formula:
 
 ```js
 bufferVideo('http://example.net/video.mp4', function (buffer) {
-	console.log('The video url is ' + buffer.url)
-	console.log('The video size is ' + buffer.size)
-	console.log('It downloaded a ' + (buffer.buffered | 0) + '% of the video')
-	console.log('Has been downloading for ' + (buffer.elapsed | 0) + ' seconds')
-	console.log('It needs ' + (buffer.remaining | 0) + '~ seconds to finish download')
-	console.log('It has been downloading at ' + buffer.speed + 'mb/s')
-	console.log('Is the download done? ' + (buffer.done ? 'YES' : 'Not yet'))
-
 	// can we start playing while the video buffers?
 	let video = document.querySelector('video')
 	let watchableTime = (video.duration / 100) * buffer.buffered
