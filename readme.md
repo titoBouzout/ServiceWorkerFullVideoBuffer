@@ -8,26 +8,34 @@ The main problem is that `pause` won't fill the buffer till the end. It will sto
 
 The workarounds of having to download a video to be able to watch it later, as most people with unreliable connections do, means that you lose all the features that such a tag provides. You cannot watch videos in sync with your friends, for example.
 
-This solves this problem by using Service Workers. It listens to `fetch` events and when a video is found, it starts to download it non-stop till the end. Then, when the video tag does a `range` request, the Service Worker is capable of satisfying these ranges if the data is available. When the data is not available, the Service Worker lets the browser do its thing.
+This solves this problem by using Service Workers. After you instruct the library to buffer a video, the service worker listens to `fetch` events and will satisfy the ranges requested whenever data is available. When the data is not available, the Service Worker lets the browser do its thing. This is done this way so the browser can display data/video as soon as possible.
 
-So you can do the old-school pause a video to make it buffer half-fully, and start watching while it's still downloading! Improving the experience for users with unreliable connections. A huge time saver.
+So you can do the old-school pause a video to make it buffer for some minutes, and start watching while it's still downloading! Improving the experience for users with unreliable connections. A huge time saver.
 
 ## How to use it?
 
-In your website, do something like the following to include the service worker
+In your website, instance the service worker and include the client code which will keep the video in memory to give the ranges to the service worker when a video needs data. The video is not kept in memory on the service worker, because they are restarted or terminated whenever the browser feels like.
 
 ```html
+<script type="text/javascript" src="/full-video-buffer-client.js"></script>
 <script>
-	if ('serviceWorker' in navigator) {
-		window.addEventListener('load', () => {
-			navigator.serviceWorker
-				.register('/full-video-buffer-service-worker.js')
-				.then(function (registration) {
-					registration.update()
-				})
-				.catch(console.log)
-		})
-	}
+	navigator.serviceWorker
+		.register('/full-video-buffer-service-worker.js')
+		.then(registration => registration.update())
+		.catch(console.log)
+
+	// start buffering a video
+	let bufferVideo = new BufferVideo()
+	// optionally you can use a callback to display info
+	bufferVideo('http://example.net/video.mp4', function (buffer) {
+		console.log('The video url is ' + buffer.url)
+		console.log('The video size is ' + buffer.size)
+		console.log('It downloaded a ' + (buffer.buffered | 0) + '% of the video')
+		console.log('Has been downloading for ' + (buffer.elapsed | 0) + ' seconds')
+		console.log('It needs ' + (buffer.remaining | 0) + '~ seconds to finish download')
+		console.log('It has been downloading at ' + buffer.speed + 'mb/s')
+		console.log('Is the download done? ' + (buffer.done ? 'YES' : 'Not yet'))
+	})
 </script>
 ```
 
@@ -38,20 +46,29 @@ On the service worker, edit the extensions of the videos that you want to fully 
 let extensions = /\.mp4$/
 
 // under which URL?
-let under = /https:\/\/example\.net\/videos\//
+let under = /\/video\//
 ```
 
-## What does this do
+On your site you can guess when you can start watching with the following formula:
 
-This will listen for `fetch` requests as defined by your `extensions`(as in file extensions) and `under` vars. As soon as a video that match is found, it will fetch ranges of 3mb in size, till the end of the video. It will keep the video in memory and then satisfy any `range` request that could be satisfied. When a range cannot be satisfied, it will let the browser do its usual thing. This is done this way so the browser can display data/video as soon as possible.
+```js
+bufferVideo('http://example.net/video.mp4', function (buffer) {
+	console.log('The video url is ' + buffer.url)
+	console.log('The video size is ' + buffer.size)
+	console.log('It downloaded a ' + (buffer.buffered | 0) + '% of the video')
+	console.log('Has been downloading for ' + (buffer.elapsed | 0) + ' seconds')
+	console.log('It needs ' + (buffer.remaining | 0) + '~ seconds to finish download')
+	console.log('It has been downloading at ' + buffer.speed + 'mb/s')
+	console.log('Is the download done? ' + (buffer.done ? 'YES' : 'Not yet'))
 
-## Caveats
+	// can we start playing while the video buffers?
+	let video = document.querySelector('video')
+	let watchableTime = (video.duration / 100) * buffer.buffered
+	let canWatch = buffer.remaining - watchableTime < watchableTime
 
-- As we use it to watch lengthy videos, we delete any video in memory if the video URL changes
-- If you close the tab, the video will be still in memory. However, this has the (perhaps desirable) effect that refreshing the tab, or closing it by mistake, will not lose the cache. Not sure how to handle this, as not really familiar with Service Worker behaviours.
-- It continuously posts the percent of the video that has been downloaded to the tab via a postMessage. This may not be ideal, but you can change it very easily.
-- It will keep the video in memory as an array buffer, so you should have enough RAM for it.
-- It will spam the console, this is just too new to remove debug messages.
+	console.log('Can we play the video yet?', canWatch)
+})
+```
 
 ## Inspiration
 
