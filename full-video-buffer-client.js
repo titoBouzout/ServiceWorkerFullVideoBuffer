@@ -86,7 +86,7 @@ class BufferVideo {
 				if (url != this.url) return
 
 				// are we done?
-				length = +response.headers.get('Content-Length')
+				let length = +response.headers.get('Content-Length')
 				if (length < this.chunk) {
 					this.done = true
 				} else if (length > this.chunk) {
