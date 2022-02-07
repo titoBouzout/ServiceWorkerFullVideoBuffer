@@ -49,7 +49,7 @@ class BufferVideo {
 			})
 		}
 	}
-	download(url, callback) {
+	download(url, callback, noCache) {
 		// if the buffer was cancelled return
 		if (url != this.url) return
 
@@ -62,26 +62,40 @@ class BufferVideo {
 			end = this.size
 		}
 
-		// fetch
 		// console.log('fetch bytes=' + start + '-' + end)
 
+		// fetch
+
+		let headers = {
+			'content-type': 'multipart/byteranges',
+			'range': 'bytes=' + start + '-' + end,
+			'x-made-by': 'https://github.com/titoBouzout/ServiceWorkerVideoFullBuffer',
+		}
+
+		// sometimes ranged requests are cached and they return more than we expect
+		if (noCache) {
+			headers.pragma = 'no-cache'
+			headers['cache-control'] = 'no-cache'
+		}
+
 		fetch(url, {
-			headers: {
-				'content-type': 'multipart/byteranges',
-				'range': 'bytes=' + start + '-' + end,
-				'x-made-by': 'https://github.com/titoBouzout/ServiceWorkerVideoFullBuffer',
-			},
+			headers: headers,
 		})
 			.then(response => {
 				// if the buffer was cancelled return
 				if (url != this.url) return
 
-				this.size = +response.headers.get('Content-Range').split('/')[1]
-
 				// are we done?
-				if (+response.headers.get('Content-Length') < this.chunk) {
+				length = +response.headers.get('Content-Length')
+				if (length < this.chunk) {
 					this.done = true
+				} else if (length > this.chunk) {
+					throw new Error(
+						'ranged request returned more than we expected, trying again using "no-cache"',
+					)
 				}
+
+				this.size = +response.headers.get('Content-Range').split('/')[1]
 
 				return response.arrayBuffer()
 			})
@@ -104,10 +118,12 @@ class BufferVideo {
 
 				this.remaining = (this.elapsed / this.buffered) * (100 - this.buffered)
 
-				// can watch  = time that takes to download - time buffered < time buffered
-
 				// callback to update the browser
-				callback && callback(this)
+				try {
+					callback && callback(this)
+				} catch (e) {
+					console.error(e)
+				}
 
 				// keep downloading or exit
 				if (this.done) {
@@ -121,9 +137,10 @@ class BufferVideo {
 				// if the buffer was cancelled return
 				if (url != this.url) return
 				console.log('errored, trying again')
+				console.error(e)
 
 				// on error keep trying
-				setTimeout(() => this.download(url, callback), 1000)
+				setTimeout(() => this.download(url, callback, true), 1000)
 			})
 	}
 	concatBuffers(buffer1, buffer2) {
