@@ -1,5 +1,7 @@
 class BufferVideo {
 	startBuffer(url, callback) {
+		url = new URL(url).href
+
 		if (url === this.url) return
 		this.url = url
 		// chunk size, it continuously download 3mb chunks of the video. Till the end of it.
