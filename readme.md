@@ -14,6 +14,8 @@ So you can do the old-school pause a video to make it buffer for some minutes, a
 
 ## How to use it?
 
+IMPORTANT: The video tag and source should use "crossorigin", else the video wont work (for some reason ¿?)
+
 In your website, instance the Service Worker and include the client code which will keep the video in memory to give the ranges to the Service Worker when a video needs data. The video is not kept in memory on the Service Worker, because they are restarted or terminated whenever the browser feels like. You just add a video tag with the same URL that you choose to buffer and the Service Worker will do the work.
 
 ```html

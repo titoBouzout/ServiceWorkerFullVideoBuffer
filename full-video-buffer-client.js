@@ -49,7 +49,7 @@ class BufferVideo {
 			})
 		}
 	}
-	download(url, callback, noCache) {
+	download(url, callback) {
 		// if the buffer was cancelled return
 		if (url != this.url) return
 
@@ -62,20 +62,17 @@ class BufferVideo {
 			end = this.size
 		}
 
-		// console.log('fetch bytes=' + start + '-' + end)
-
 		// fetch
-
+		// console.log('fetch bytes=' + start + '-' + end)
 		let headers = {
 			'content-type': 'multipart/byteranges',
 			'range': 'bytes=' + start + '-' + end,
 			'x-made-by': 'https://github.com/titoBouzout/ServiceWorkerVideoFullBuffer',
-		}
-
-		// sometimes ranged requests are cached and they return more than we expect
-		if (noCache) {
-			headers.pragma = 'no-cache'
-			headers['cache-control'] = 'no-cache'
+			// sometimes ranged requests are cached and they return more than we expect
+			// they could return the whole thing, so better to use no cache
+			// to return just what we want and no stress the network
+			'pragma': 'no-cache',
+			'cache-control': 'no-cache',
 		}
 
 		fetch(url, {
@@ -136,11 +133,10 @@ class BufferVideo {
 			.catch(e => {
 				// if the buffer was cancelled return
 				if (url != this.url) return
-				console.log('errored, trying again')
 				console.error(e)
 
 				// on error keep trying
-				setTimeout(() => this.download(url, callback, true), 1000)
+				setTimeout(() => this.download(url, callback), 1000)
 			})
 	}
 	concatBuffers(buffer1, buffer2) {
